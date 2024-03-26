@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #444444, #888888);
+            background-size: cover;
+            background-attachment: fixed;
+            margin: 0;
+            padding-top: 70px;
+        }
+        header {
+            background-color: black;
+            color: white;
+            padding: 10px 20px;
+            text-align: left;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        header img {
+            width: 50px;
+            height: auto;
+            margin-right: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            margin-top: 100px;
+            margin-bottom: 20px;
+            font-size: 72px;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            text-shadow: 0 0 20px rgba(148, 0, 211, 0.7);
+        }
+        .movies-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 20px;
+            position: relative;
+        }
+        .movie-card {
+            width: calc((100% / 5) - 20px);
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        .movie-card:hover {
+            transform: translateY(-5px);
+        }
+        .movie-card img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        .movie-card:hover img {
+            transform: scale(1.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 2;
+        }
+        .modal.show {
+            display: block;
+        }
+        .modal-content {
+            text-align: left;
+        }
+        .modal img {
+            width: 100%;
+            height: auto;
+            max-width: 200px;
+            margin-bottom: 10px;
+        }
+        .back-button {
+            margin: 20px;
+            display: inline-block;
+        }
+
+        .header-tabs {
+            display: flex;
+        }
+
+        .header-tabs a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+        }
+
+        .header-tabs a:hover {
+            background-color: #333;
+        }
+
+        .search-form {
+            text-align: center;
+        }
+
+        .search-form input[type="text"] {
+            width: 200px;
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        .search-form button[type="submit"] {
+            margin-left: 10px;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .second-search-form {
+            margin-left: auto;
+        }
+
+        
+
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://i.imgur.com/yYwdObL.png" alt="Movie Database Logo" class="header-logo">
+        <div class="header-tabs">
+        <a href="/">Home</a>
+        </div>
+        <form action="{% url 'search_movies' %}" method="post" class="search-form second-search-form">
+        {% csrf_token %}
+        <input type="text" name="query" placeholder="Search">
+        <button type="submit">Search</button>
+        </form>
+        </header>
+    </header>
+    <div class="container">
+        <h1></h1>
+        {% if search_results %}
+            <div class="movies-container">
+                {% for movie in search_results %}
+                    <div class="movie-card" onclick="showMovieModal('{{ movie.title }}', '{{ movie.release_date }}', '{{ movie.overview }}', '{% for actor in movie.cast %}{{ actor.name }}{% if not forloop.last %}, {% endif %}{% endfor %}', '{{ movie.vote_average }}')">
+                        <img src="https://image.tmdb.org/t/p/w200/{{ movie.poster_path }}" alt="{{ movie.title }}">
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-results">
+                <h2>No Results Found</h2>
+            </div>
+        {% endif %}
+        <div id="movieModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeMovieModal()">&times;</span>
+                <h2 id="modalTitle"></h2>
+                <p><strong>Release Date:</strong> <span id="modalReleaseDate"></span></p>
+                <p><strong>Overview:</strong> <span id="modalOverview"></span></p>
+                <p><strong>Cast:</strong> <span id="modalCast"></span></p>
+                <p><strong>Rating:</strong> <span id="modalRating"></span></p>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        function showMovieModal(title, releaseDate, overview, cast, rating) {
+            const roundedRating = parseFloat(rating).toFixed(1);
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalReleaseDate').innerText = releaseDate;
+            document.getElementById('modalOverview').innerText = overview;
+            document.getElementById('modalCast').innerText = cast;
+            document.getElementById('modalRating').innerText = roundedRating;
+            document.getElementById('movieModal').classList.add('show');
+        }
+    
+        function closeMovieModal() {
+            document.getElementById('movieModal').classList.remove('show');
+        }
+    </script>
+    
+</body>
+</html>
